@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: sans-serif;
+        }
+
+        #people-count-container, #active-person-container {
+            display: flex;
+            color: grey;
+            justify-content: center;
+        }
+
+        #people-count, #active-person {
+            margin-left: 10px;
+            color: black;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+
+<div id="container">
+    <h1>Face Detection</h1>
+    <video id="video" autoplay style="display: none"></video>
+    <canvas id="canvas" width="600px" height="400px"></canvas>
+</div>
+
+<div id="panel-container">
+    <div id="people-count-container">
+        <h3>Count: </h3>
+        <h3 id="people-count">0</h3>
+    </div>
+    <div id="active-person-container">
+        <h3>Activity: </h3>
+        <h3 id="active-person">Not Active</h3>
+    </div>
+
+</div>
+
+<script>
+    const videoWidth = 600;
+    const videoHeight = 400;
+    const videoArea = videoWidth * videoHeight;
+
+    let video = document.getElementById("video");
+    let model;
+    // declare a canvas variable and get its context
+    let canvas = document.getElementById("canvas");
+    let ctx = canvas.getContext("2d");
+
+    const setupCamera = () => {
+      navigator.mediaDevices
+        .getUserMedia({
+          video: { width: videoWidth, height: videoHeight },
+          audio: false,
+        })
+        .then((stream) => {
+          video.srcObject = stream;
+        });
+    };
+
+    const thresh = 10; // 0.1s * 10 = 1s
+    var peopleCount = 0;
+    var threshCount = 0;
+    var activePerson = 0;
+
+    const detectFaces = async () => {
+        const prediction = await model.estimateFaces(video, false);
+
+        // console.log(prediction);
+
+        // draw the video first
+        ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+
+        prediction.forEach((pred) => {
+
+            // draw the rectangle enclosing the face
+            ctx.beginPath();
+            ctx.lineWidth = "4";
+            ctx.strokeStyle = "blue";
+            // the last two arguments are width and height
+            // since blazeface returned only the coordinates,
+            // we can find the width and height by subtracting them.
+            var width = pred.bottomRight[0] - pred.topLeft[0];
+            var height = pred.bottomRight[1] - pred.topLeft[1]
+            ctx.rect(
+                pred.topLeft[0],
+                pred.topLeft[1],
+                width,
+                height
+            );
+            ctx.stroke();
+
+
+
+            // drawing small rectangles for the face landmarks
+            ctx.fillStyle = "red";
+            pred.landmarks.forEach((landmark) => {
+                ctx.fillRect(landmark[0], landmark[1], 5, 5);
+            });
+
+            // Face Count
+            var face2Screen = width * height / videoArea;
+            if (pred.probability > 0.98 & face2Screen > 0.15) { // cumulate count
+                threshCount++;
+
+            } else { // reset count
+                threshCount = 0;
+                activePerson = 0;
+                document.getElementById("active-person").innerHTML = "Not Active";
+            }
+
+            // threshold met
+            if (threshCount > thresh & activePerson == 0) {
+                peopleCount++;
+                threshCount = 0;
+                activePerson = 1;
+                document.getElementById("active-person").innerHTML = "Active";
+                document.getElementById("people-count").innerHTML = peopleCount;
+
+            }
+
+        });
+
+
+
+    };
+
+    // Initialize face detection
+    setupCamera();
+    video.addEventListener("loadeddata", async () => {
+        model = await blazeface.load();
+        // call detect faces every 100 milliseconds or 10 times every second
+        setInterval(detectFaces, 100);
+
+
+
+    });
+
+</script>
+
+</body>
+</html>
