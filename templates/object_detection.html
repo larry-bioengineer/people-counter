@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Home</title>
+    <title>Object Detection</title>
     <style>
         body {
             text-align: center;
@@ -25,11 +25,12 @@
 </head>
 <body>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@1.0.0"> </script>
+
 
 <div id="container">
-    <h1>Face Detection</h1>
+    <h1>Object Detection</h1>
     <video id="video" autoplay style="display: none"></video>
     <canvas id="canvas" width="600px" height="400px"></canvas>
 </div>
@@ -74,16 +75,13 @@
     var activePerson = 0;
 
     const detectFaces = async () => {
-        const prediction = await model.estimateFaces(video, false);
+        const prediction = await model.classify(video, false);
 
-        if (prediction.length == 0) {
-            document.getElementById("active-person").innerHTML = "Not Active";
-            threshCount = 0;
-            activePerson = 0;
-        }
+        console.log(prediction);
 
         // draw the video first
         ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+
         prediction.forEach((pred) => {
 
             // draw the rectangle enclosing the face
@@ -111,27 +109,7 @@
                 ctx.fillRect(landmark[0], landmark[1], 5, 5);
             });
 
-            // Face Count
-            var screenPercent = 0.07 // represent how big the face needs to be count as "active"
-            var face2Screen = width * height / videoArea;
-            if (pred.probability > 0.90 & face2Screen > screenPercent) { // cumulate count
-                threshCount++;
 
-            } else { // reset count
-                threshCount = 0;
-                activePerson = 0;
-                document.getElementById("active-person").innerHTML = "Not Active";
-            }
-
-            // threshold met
-            if (threshCount > thresh & activePerson == 0) {
-                peopleCount++;
-                threshCount = 0;
-                activePerson = 1;
-                document.getElementById("active-person").innerHTML = "Active";
-                document.getElementById("people-count").innerHTML = peopleCount;
-
-            }
 
         });
 
@@ -142,7 +120,7 @@
     // Initialize face detection
     setupCamera();
     video.addEventListener("loadeddata", async () => {
-        model = await blazeface.load();
+        model = await mobilenet.load();
         // call detect faces every 100 milliseconds or 10 times every second
         setInterval(detectFaces, 100);
 

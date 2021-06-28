@@ -8,6 +8,10 @@ def home():
 
     return render_template('home.html')
 
+@app.route('/object_detection')
+def ObjectDetection():
+
+    return render_template('object_detection.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
